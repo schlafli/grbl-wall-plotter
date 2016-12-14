@@ -3,8 +3,6 @@
 _**This repository is an experimental branch of the official v1.1 grbl project intended to add support for hanging wall plotters (also known as polargraphs).**_
 
 For a full description of the types of systems this branch is intended to support, along with other implementation notes, see the  [wiki](https://github.com/jasonwebb/grbl-polargraph/wiki).
-
-For a comprehensive list of all changes made in this branch, check out the "[Changes to grbl](https://github.com/jasonwebb/grbl-polargraph/wiki/Changes-made-to-grbl)" wiki page
 ***
 Grbl is a no-compromise, high performance, low cost alternative to parallel-port-based motion control for CNC milling. This version of Grbl runs on an Arduino with a 328p processor (Uno, Duemilanove, Nano, Micro, etc).
 

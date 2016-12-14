@@ -345,7 +345,7 @@ uint8_t plan_buffer_line(float *target, plan_line_data_t *pl_data)
     #endif
   } else { memcpy(position_steps, pl.position, sizeof(pl.position)); }
 
-  #if defined(COREXY) || defined(COREXY)
+  #if defined(COREXY) || defined(POLARGRAPH)
     target_steps[A_MOTOR] = lround(target[A_MOTOR]*settings.steps_per_mm[A_MOTOR]);
     target_steps[B_MOTOR] = lround(target[B_MOTOR]*settings.steps_per_mm[B_MOTOR]);
   #endif

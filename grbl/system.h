@@ -125,7 +125,7 @@
 // Define global system variables
 typedef struct {
   uint8_t state;               // Tracks the current system state of Grbl.
-  uint8_t abort;               // System abort flag. Forces exit back to main loop for reset.             
+  uint8_t abort;               // System abort flag. Forces exit back to main loop for reset.
   uint8_t suspend;             // System suspend bitflag variable that manages holds, cancels, and safety door.
   uint8_t soft_limit;          // Tracks soft limit errors for the state machine. (boolean)
   uint8_t step_control;        // Governs the step segment generator depending on system state.
@@ -187,6 +187,13 @@ void system_convert_array_steps_to_mpos(float *position, int32_t *steps);
   int32_t system_convert_corexy_to_x_axis_steps(int32_t *steps);
   int32_t system_convert_corexy_to_y_axis_steps(int32_t *steps);
 #endif
+
+// Polargraph calculation only. Returns x or y-axis "steps" based on polargraph motor steps
+#ifdef POLARGRAPH
+  int32_t system_convert_polargraph_to_x_axis_steps(int32_t *steps);
+  int32_t system_convert_polargraph_to_y_axis_steps(int32_t *steps);
+#endif
+
 
 // Checks and reports if target array exceeds machine travel limits.
 uint8_t system_check_travel_limits(float *target);

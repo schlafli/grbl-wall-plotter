@@ -355,7 +355,7 @@ uint8_t plan_buffer_line(float *target, plan_line_data_t *pl_data)
     block->steps[B_MOTOR] = labs((target_steps[X_AXIS]-position_steps[X_AXIS]) - (target_steps[Y_AXIS]-position_steps[Y_AXIS]));
   #elif defined(POLARGRAPH)
     block->steps[A_MOTOR] = labs(sqrt(square(target_steps[X_AXIS]-position_steps[X_AXIS]) + square(target_steps[Y_AXIS]-position_steps[Y_AXIS])));
-    block->steps[B_MOTOR] = labs(sqrt(square(settings.max_travel[A_MOTOR]-(target_steps[X_AXIS]+position_steps[X_AXIS])) + square(target_steps[Y_AXIS]-position_steps[Y_AXIS])));
+    block->steps[B_MOTOR] = labs(sqrt(square(settings.max_travel[X_AXIS]-(target_steps[X_AXIS]+position_steps[X_AXIS])) + square(target_steps[Y_AXIS]-position_steps[Y_AXIS])));
   #endif
 
   for (idx=0; idx<N_AXIS; idx++) {

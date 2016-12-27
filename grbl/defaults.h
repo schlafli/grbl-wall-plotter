@@ -453,7 +453,7 @@
 #endif
 
 // TODO: Calculate and verify all values
-#ifdef DEFAULTS_POLARGRAPH
+#ifdef DEFAULTS_WALL_PLOTTER
   // Settings only for custom wall plotter
   #define DEFAULT_X_STEPS_PER_MM 1000.0 // TODO: Calculate DEFAULT_X_STEPS_PER_MM
   #define DEFAULT_Y_STEPS_PER_MM 1000.0 // TODO: Calculate DEFAULT_Y_STEPS_PER_MM

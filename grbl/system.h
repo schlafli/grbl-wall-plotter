@@ -188,10 +188,10 @@ void system_convert_array_steps_to_mpos(float *position, int32_t *steps);
   int32_t system_convert_corexy_to_y_axis_steps(int32_t *steps);
 #endif
 
-// Polargraph calculation only. Returns x or y-axis "steps" based on polargraph motor steps
-#ifdef POLARGRAPH
-  int32_t system_convert_polargraph_to_x_axis_steps(int32_t *steps);
-  int32_t system_convert_polargraph_to_y_axis_steps(int32_t *steps);
+// Wall plotter calculation only. Returns x or y-axis "steps" based on wall plotter motor steps
+#ifdef WALL_PLOTTER
+  int32_t system_convert_wall_plotter_to_x_axis_steps(int32_t *steps);
+  int32_t system_convert_wall_plotter_to_y_axis_steps(int32_t *steps);
 #endif
 
 

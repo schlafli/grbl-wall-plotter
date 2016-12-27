@@ -379,7 +379,7 @@ void report_build_info(char *line)
   #ifdef COREXY
     serial_write('C');
   #endif
-  #ifdef POLARGRAPH
+  #ifdef WALL_PLOTTER
     serial_write('G');
   #endif
   #ifdef PARKING_ENABLE

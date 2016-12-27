@@ -336,16 +336,16 @@ uint8_t plan_buffer_line(float *target, plan_line_data_t *pl_data)
       position_steps[X_AXIS] = system_convert_corexy_to_x_axis_steps(sys_position);
       position_steps[Y_AXIS] = system_convert_corexy_to_y_axis_steps(sys_position);
       position_steps[Z_AXIS] = sys_position[Z_AXIS];
-    #elif defined(POLARGRAPH)
-      position_steps[X_AXIS] = system_convert_polargraph_to_x_axis_steps(sys_position);
-      position_steps[Y_AXIS] = system_convert_polargraph_to_y_axis_steps(sys_position);
+    #elif defined(WALL_PLOTTER)
+      position_steps[X_AXIS] = system_convert_wall_plotter_to_x_axis_steps(sys_position);
+      position_steps[Y_AXIS] = system_convert_wall_plotter_to_y_axis_steps(sys_position);
       position_steps[Z_AXIS] = sys_position[Z_AXIS];
     #else
       memcpy(position_steps, sys_position, sizeof(sys_position));
     #endif
   } else { memcpy(position_steps, pl.position, sizeof(pl.position)); }
 
-  #if defined(COREXY) || defined(POLARGRAPH)
+  #if defined(COREXY) || defined(WALL_PLOTTER)
     target_steps[A_MOTOR] = lround(target[A_MOTOR]*settings.steps_per_mm[A_MOTOR]);
     target_steps[B_MOTOR] = lround(target[B_MOTOR]*settings.steps_per_mm[B_MOTOR]);
   #endif
@@ -353,7 +353,7 @@ uint8_t plan_buffer_line(float *target, plan_line_data_t *pl_data)
   #ifdef COREXY
     block->steps[A_MOTOR] = labs((target_steps[X_AXIS]-position_steps[X_AXIS]) + (target_steps[Y_AXIS]-position_steps[Y_AXIS]));
     block->steps[B_MOTOR] = labs((target_steps[X_AXIS]-position_steps[X_AXIS]) - (target_steps[Y_AXIS]-position_steps[Y_AXIS]));
-  #elif defined(POLARGRAPH)
+  #elif defined(WALL_PLOTTER)
     block->steps[A_MOTOR] = labs(sqrt(square(target_steps[X_AXIS]-position_steps[X_AXIS]) + square(target_steps[Y_AXIS]-position_steps[Y_AXIS])));
     block->steps[B_MOTOR] = labs(sqrt(square(settings.max_travel[X_AXIS]-(target_steps[X_AXIS]+position_steps[X_AXIS])) + square(target_steps[Y_AXIS]-position_steps[Y_AXIS])));
   #endif
@@ -362,7 +362,7 @@ uint8_t plan_buffer_line(float *target, plan_line_data_t *pl_data)
     // Calculate target position in absolute steps, number of steps for each axis, and determine max step events.
     // Also, compute individual axes distance for move and prep unit vector calculations.
     // NOTE: Computes true distance from converted step values.
-    #if defined(COREXY) || defined(POLARGRAPH)
+    #if defined(COREXY) || defined(WALL_PLOTTER)
       if ( !(idx == A_MOTOR) && !(idx == B_MOTOR) ) {
         target_steps[idx] = lround(target[idx]*settings.steps_per_mm[idx]);
         block->steps[idx] = labs(target_steps[idx]-position_steps[idx]);
@@ -378,7 +378,7 @@ uint8_t plan_buffer_line(float *target, plan_line_data_t *pl_data)
       } else {
         delta_mm = (target_steps[idx] - position_steps[idx])/settings.steps_per_mm[idx];
       }
-    #elif defined(POLARGRAPH)
+    #elif defined(WALL_PLOTTER)
       if (idx == A_MOTOR) {
         delta_mm = sqrt(square(target_steps[X_AXIS]-position_steps[X_AXIS]) + square(target_steps[Y_AXIS]-position_steps[Y_AXIS]));
       } else if (idx == B_MOTOR) {
@@ -508,11 +508,11 @@ void plan_sync_position()
       } else {
         pl.position[idx] = sys_position[idx];
       }
-    #elif defined(POLARGRAPH)
+    #elif defined(WALL_PLOTTER)
       if (idx==X_AXIS) {
-        pl.position[X_AXIS] = system_convert_polargraph_to_x_axis_steps(sys_position);
+        pl.position[X_AXIS] = system_convert_wall_plotter_to_x_axis_steps(sys_position);
       } else if (idx==Y_AXIS) {
-        pl.position[Y_AXIS] = system_convert_polargraph_to_y_axis_steps(sys_position);
+        pl.position[Y_AXIS] = system_convert_wall_plotter_to_y_axis_steps(sys_position);
       } else {
         pl.position[idx] = sys_position[idx];
       }

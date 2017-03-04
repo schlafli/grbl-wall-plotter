@@ -459,28 +459,30 @@ void protocol_exec_rt_system()
       }
     }
 
-    // NOTE: Since coolant state always performs a planner sync whenever it changes, the current
-    // run state can be determined by checking the parser state.
-    if (rt_exec & (EXEC_COOLANT_FLOOD_OVR_TOGGLE | EXEC_COOLANT_MIST_OVR_TOGGLE)) {
-      if ((sys.state == STATE_IDLE) || (sys.state & (STATE_CYCLE | STATE_HOLD))) {
-        uint8_t coolant_state = gc_state.modal.coolant;
-        #ifdef ENABLE_M7
-          if (rt_exec & EXEC_COOLANT_MIST_OVR_TOGGLE) {
-            if (coolant_state & COOLANT_MIST_ENABLE) { bit_false(coolant_state,COOLANT_MIST_ENABLE); }
-            else { coolant_state |= COOLANT_MIST_ENABLE; }
-          }
-          if (rt_exec & EXEC_COOLANT_FLOOD_OVR_TOGGLE) {
+    #ifndef DISABLE_COOLANT_SUBSYSTEM
+      // NOTE: Since coolant state always performs a planner sync whenever it changes, the current
+      // run state can be determined by checking the parser state.
+      if (rt_exec & (EXEC_COOLANT_FLOOD_OVR_TOGGLE | EXEC_COOLANT_MIST_OVR_TOGGLE)) {
+        if ((sys.state == STATE_IDLE) || (sys.state & (STATE_CYCLE | STATE_HOLD))) {
+          uint8_t coolant_state = gc_state.modal.coolant;
+          #ifdef ENABLE_M7
+            if (rt_exec & EXEC_COOLANT_MIST_OVR_TOGGLE) {
+              if (coolant_state & COOLANT_MIST_ENABLE) { bit_false(coolant_state,COOLANT_MIST_ENABLE); }
+              else { coolant_state |= COOLANT_MIST_ENABLE; }
+            }
+            if (rt_exec & EXEC_COOLANT_FLOOD_OVR_TOGGLE) {
+              if (coolant_state & COOLANT_FLOOD_ENABLE) { bit_false(coolant_state,COOLANT_FLOOD_ENABLE); }
+              else { coolant_state |= COOLANT_FLOOD_ENABLE; }
+            }
+          #else
             if (coolant_state & COOLANT_FLOOD_ENABLE) { bit_false(coolant_state,COOLANT_FLOOD_ENABLE); }
             else { coolant_state |= COOLANT_FLOOD_ENABLE; }
-          }
-        #else
-          if (coolant_state & COOLANT_FLOOD_ENABLE) { bit_false(coolant_state,COOLANT_FLOOD_ENABLE); }
-          else { coolant_state |= COOLANT_FLOOD_ENABLE; }
-        #endif
-        coolant_set_state(coolant_state); // Report counter set in coolant_set_state().
-        gc_state.modal.coolant = coolant_state;
+          #endif
+          coolant_set_state(coolant_state); // Report counter set in coolant_set_state().
+          gc_state.modal.coolant = coolant_state;
+        }
       }
-    }
+    #endif
   }
 
   #ifdef DEBUG
@@ -524,7 +526,11 @@ static void protocol_exec_rt_suspend()
   #ifdef VARIABLE_SPINDLE
     float restore_spindle_speed;
     if (block == NULL) {
-      restore_condition = (gc_state.modal.spindle | gc_state.modal.coolant);
+      #ifndef DISABLE_COOLANT_SUBSYSTEM
+        restore_condition = (gc_state.modal.spindle | gc_state.modal.coolant);
+      #else
+        restore_condition = gc_state.modal.spindle ;
+      #endif
       restore_spindle_speed = gc_state.spindle_speed;
     } else {
       restore_condition = block->condition;
@@ -560,7 +566,9 @@ static void protocol_exec_rt_suspend()
           #ifndef PARKING_ENABLE
 
             spindle_set_state(SPINDLE_DISABLE,0.0); // De-energize
-            coolant_set_state(COOLANT_DISABLE);     // De-energize
+            #ifndef DISABLE_COOLANT_SUBSYSTEM
+              coolant_set_state(COOLANT_DISABLE);     // De-energize
+            #endif
 
           #else
 					
@@ -629,7 +637,9 @@ static void protocol_exec_rt_suspend()
             report_feedback_message(MESSAGE_SLEEP_MODE);
             // Spindle and coolant should already be stopped, but do it again just to be sure.
             spindle_set_state(SPINDLE_DISABLE,0.0); // De-energize
-            coolant_set_state(COOLANT_DISABLE); // De-energize
+            #ifndef DISABLE_COOLANT_SUBSYSTEM
+              coolant_set_state(COOLANT_DISABLE); // De-energize
+            #endif
             st_go_idle(); // Disable steppers
             while (!(sys.abort)) { protocol_exec_rt_system(); } // Do nothing until reset.
             return; // Abort received. Return to re-initialize.
@@ -676,14 +686,16 @@ static void protocol_exec_rt_suspend()
                 }
               }
             }
-            if (gc_state.modal.coolant != COOLANT_DISABLE) {
-              // Block if safety door re-opened during prior restore actions.
-              if (bit_isfalse(sys.suspend,SUSPEND_RESTART_RETRACT)) {
-                // NOTE: Laser mode will honor this delay. An exhaust system is often controlled by this pin.
-                coolant_set_state((restore_condition & (PL_COND_FLAG_COOLANT_FLOOD | PL_COND_FLAG_COOLANT_FLOOD)));
-                delay_sec(SAFETY_DOOR_COOLANT_DELAY, DELAY_MODE_SYS_SUSPEND);
+            #ifndef DISABLE_COOLANT_SUBSYSTEM
+              if (gc_state.modal.coolant != COOLANT_DISABLE) {
+                // Block if safety door re-opened during prior restore actions.
+                if (bit_isfalse(sys.suspend,SUSPEND_RESTART_RETRACT)) {
+                  // NOTE: Laser mode will honor this delay. An exhaust system is often controlled by this pin.
+                  coolant_set_state((restore_condition & (PL_COND_FLAG_COOLANT_FLOOD | PL_COND_FLAG_COOLANT_FLOOD)));
+                  delay_sec(SAFETY_DOOR_COOLANT_DELAY, DELAY_MODE_SYS_SUSPEND);
+                }
               }
-            }
+            #endif
 
             #ifdef PARKING_ENABLE
               // Execute slow plunge motion from pull-out position to resume position.

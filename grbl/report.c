@@ -315,16 +315,17 @@ void report_gcode_modes()
     case SPINDLE_ENABLE_CCW : serial_write('4'); break;
     case SPINDLE_DISABLE : serial_write('5'); break;
   }
-
-  #ifdef ENABLE_M7
-    if (gc_state.modal.coolant) { // Note: Multiple coolant states may be active at the same time.
-      if (gc_state.modal.coolant & PL_COND_FLAG_COOLANT_MIST) { report_util_gcode_modes_M(); serial_write('7'); }
-      if (gc_state.modal.coolant & PL_COND_FLAG_COOLANT_FLOOD) { report_util_gcode_modes_M(); serial_write('8'); }
-    } else { report_util_gcode_modes_M(); serial_write('9'); }
-  #else
-    report_util_gcode_modes_M();
-    if (gc_state.modal.coolant) { serial_write('8'); }
-    else { serial_write('9'); }
+  #ifndef DISABLE_COOLANT_SUBSYSTEM
+    #ifdef ENABLE_M7
+      if (gc_state.modal.coolant) { // Note: Multiple coolant states may be active at the same time.
+        if (gc_state.modal.coolant & PL_COND_FLAG_COOLANT_MIST) { report_util_gcode_modes_M(); serial_write('7'); }
+        if (gc_state.modal.coolant & PL_COND_FLAG_COOLANT_FLOOD) { report_util_gcode_modes_M(); serial_write('8'); }
+      } else { report_util_gcode_modes_M(); serial_write('9'); }
+    #else
+      report_util_gcode_modes_M();
+      if (gc_state.modal.coolant) { serial_write('8'); }
+      else { serial_write('9'); }
+    #endif
   #endif
 
   #ifdef ENABLE_PARKING_OVERRIDE_CONTROL
@@ -611,8 +612,12 @@ void report_realtime_status()
       print_uint8_base10(sys.spindle_speed_ovr);
 
       uint8_t sp_state = spindle_get_state();
-      uint8_t cl_state = coolant_get_state();
-      if (sp_state || cl_state) {
+      #ifndef DISABLE_COOLANT_SUBSYSTEM
+        uint8_t cl_state = coolant_get_state();
+        if (sp_state || cl_state) {
+      #else
+        if (sp_state) {
+      #endif
         printPgmString(PSTR("|A:"));
         if (sp_state) { // != SPINDLE_STATE_DISABLE
           #ifdef VARIABLE_SPINDLE
@@ -627,9 +632,11 @@ void report_realtime_status()
             else { serial_write('C'); } // CCW
           #endif
         }
-        if (cl_state & COOLANT_STATE_FLOOD) { serial_write('F'); }
-        #ifdef ENABLE_M7
-          if (cl_state & COOLANT_STATE_MIST) { serial_write('M'); }
+        #ifndef DISABLE_COOLANT_SUBSYSTEM
+          if (cl_state & COOLANT_STATE_FLOOD) { serial_write('F'); }
+          #ifdef ENABLE_M7
+            if (cl_state & COOLANT_STATE_MIST) { serial_write('M'); }
+          #endif
         #endif
       }
     }

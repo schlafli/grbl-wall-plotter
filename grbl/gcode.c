@@ -260,20 +260,22 @@ uint8_t gc_execute_line(char *line)
               case 5: gc_block.modal.spindle = SPINDLE_DISABLE; break;
             }
             break;
-          #ifdef ENABLE_M7
-            case 7: case 8: case 9:
-          #else
-            case 8: case 9:
+          #ifndef DISABLE_COOLANT_SUBSYSTEM
+            #ifdef ENABLE_M7
+              case 7: case 8: case 9:
+            #else
+              case 8: case 9:
+            #endif
+              word_bit = MODAL_GROUP_M8;
+              switch(int_value) {
+                #ifdef ENABLE_M7
+                  case 7: gc_block.modal.coolant = COOLANT_MIST_ENABLE; break;
+                #endif
+                case 8: gc_block.modal.coolant = COOLANT_FLOOD_ENABLE; break;
+                case 9: gc_block.modal.coolant = COOLANT_DISABLE; break;
+              }
+              break;
           #endif
-            word_bit = MODAL_GROUP_M8;
-            switch(int_value) {
-              #ifdef ENABLE_M7
-                case 7: gc_block.modal.coolant = COOLANT_MIST_ENABLE; break;
-              #endif
-              case 8: gc_block.modal.coolant = COOLANT_FLOOD_ENABLE; break;
-              case 9: gc_block.modal.coolant = COOLANT_DISABLE; break;
-            }
-            break;
           #ifdef ENABLE_PARKING_OVERRIDE_CONTROL
             case 56:
               word_bit = MODAL_GROUP_M9;
@@ -858,7 +860,11 @@ uint8_t gc_execute_line(char *line)
 
     // Initialize planner data to current spindle and coolant modal state.
     pl_data->spindle_speed = gc_state.spindle_speed;
-    plan_data.condition = (gc_state.modal.spindle | gc_state.modal.coolant);
+    #ifndef DISABLE_COOLANT_SUBSYSTEM
+      plan_data.condition = (gc_state.modal.spindle | gc_state.modal.coolant);
+    #else
+      plan_data.condition = gc_state.modal.spindle;
+    #endif
 
     uint8_t status = jog_execute(&plan_data, &gc_block);
     if (status == STATUS_OK) { memcpy(gc_state.position, gc_block.values.xyz, sizeof(gc_block.values.xyz)); }
@@ -948,15 +954,17 @@ uint8_t gc_execute_line(char *line)
   }
   pl_data->condition |= gc_state.modal.spindle; // Set condition flag for planner use.
 
-  // [8. Coolant control ]:
-  if (gc_state.modal.coolant != gc_block.modal.coolant) {
-    // NOTE: Coolant M-codes are modal. Only one command per line is allowed. But, multiple states
-    // can exist at the same time, while coolant disable clears all states.
-    coolant_sync(gc_block.modal.coolant);
-    if (gc_block.modal.coolant == COOLANT_DISABLE) { gc_state.modal.coolant = COOLANT_DISABLE; }
-    else { gc_state.modal.coolant |= gc_block.modal.coolant; }
-  }
-  pl_data->condition |= gc_state.modal.coolant; // Set condition flag for planner use.
+  #ifndef DISABLE_COOLANT_SUBSYSTEM
+    // [8. Coolant control ]:
+    if (gc_state.modal.coolant != gc_block.modal.coolant) {
+      // NOTE: Coolant M-codes are modal. Only one command per line is allowed. But, multiple states
+      // can exist at the same time, while coolant disable clears all states.
+      coolant_sync(gc_block.modal.coolant);
+      if (gc_block.modal.coolant == COOLANT_DISABLE) { gc_state.modal.coolant = COOLANT_DISABLE; }
+      else { gc_state.modal.coolant |= gc_block.modal.coolant; }
+    }
+    pl_data->condition |= gc_state.modal.coolant; // Set condition flag for planner use.
+  #endif
 
   // [9. Override control ]: NOT SUPPORTED. Always enabled. Except for a Grbl-only parking control.
   #ifdef ENABLE_PARKING_OVERRIDE_CONTROL
@@ -1101,7 +1109,9 @@ uint8_t gc_execute_line(char *line)
       // gc_state.modal.cutter_comp = CUTTER_COMP_DISABLE; // Not supported.
       gc_state.modal.coord_select = 0; // G54
       gc_state.modal.spindle = SPINDLE_DISABLE;
+#ifndef DISABLE_COOLANT_SUBSYSTEM
       gc_state.modal.coolant = COOLANT_DISABLE;
+#endif
       #ifdef ENABLE_PARKING_OVERRIDE_CONTROL
         #ifdef DEACTIVATE_PARKING_UPON_INIT
           gc_state.modal.override = OVERRIDE_DISABLED;
@@ -1121,7 +1131,9 @@ uint8_t gc_execute_line(char *line)
         if (!(settings_read_coord_data(gc_state.modal.coord_select,gc_state.coord_system))) { FAIL(STATUS_SETTING_READ_FAIL); }
         system_flag_wco_change(); // Set to refresh immediately just in case something altered.
         spindle_set_state(SPINDLE_DISABLE,0.0);
-        coolant_set_state(COOLANT_DISABLE);
+        #ifndef DISABLE_COOLANT_SUBSYSTEM
+          coolant_set_state(COOLANT_DISABLE);
+        #endif
       }
       report_feedback_message(MESSAGE_PROGRAM_END);
     }

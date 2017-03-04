@@ -349,19 +349,27 @@
 // and the voltage set by the minimum PWM for minimum rpm. This difference is 0.02V per PWM value. So, when
 // minimum PWM is at 1, only 0.02 volts separate enabled and disabled. At PWM 5, this would be 0.1V. Keep
 // in mind that you will begin to lose PWM resolution with increased minimum PWM values, since you have less
-// and less range over the total 256 PWM levels to signal different spindle speeds.
-// NOTE: Compute duty cycle at the minimum PWM by this equation: (% duty cycle)=(SPINDLE_MINIMUM_PWM/256)*100
-// #define SPINDLE_MINIMUM_PWM_VALUE 5 // Default disabled. Uncomment to enable. Must be greater than zero. Integer (1-255).
+// and less range over the total 255 PWM levels to signal different spindle speeds.
+// NOTE: Compute duty cycle at the minimum PWM by this equation: (% duty cycle)=(SPINDLE_PWM_MIN_VALUE/255)*100
+// #define SPINDLE_PWM_MIN_VALUE 5 // Default disabled. Uncomment to enable. Must be greater than zero. Integer (1-255).
 
 // By default on a 328p(Uno), Grbl combines the variable spindle PWM and the enable into one pin to help
 // preserve I/O pins. For certain setups, these may need to be separate pins. This configure option uses
 // the spindle direction pin(D13) as a separate spindle enable pin along with spindle speed PWM on pin D11.
 // NOTE: This configure option only works with VARIABLE_SPINDLE enabled and a 328p processor (Uno).
-// NOTE: With no direction pin, the spindle clockwise M4 g-code command will be removed. M3 and M5 still work.
+// NOTE: Without a direction pin, M4 will not have a pin output to indicate a difference with M3. 
 // NOTE: BEWARE! The Arduino bootloader toggles the D13 pin when it powers up. If you flash Grbl with
 // a programmer (you can use a spare Arduino as "Arduino as ISP". Search the web on how to wire this.),
 // this D13 LED toggling should go away. We haven't tested this though. Please report how it goes!
 // #define USE_SPINDLE_DIR_AS_ENABLE_PIN // Default disabled. Uncomment to enable.
+
+// Alters the behavior of the spindle enable pin with the USE_SPINDLE_DIR_AS_ENABLE_PIN option . By default,
+// Grbl will not disable the enable pin if spindle speed is zero and M3/4 is active, but still sets the PWM 
+// output to zero. This allows the users to know if the spindle is active and use it as an additional control
+// input. However, in some use cases, user may want the enable pin to disable with a zero spindle speed and 
+// re-enable when spindle speed is greater than zero. This option does that.
+// NOTE: Requires USE_SPINDLE_DIR_AS_ENABLE_PIN to be enabled.
+// #define SPINDLE_ENABLE_OFF_WITH_ZERO_SPEED // Default disabled. Uncomment to enable.
 
 // With this enabled, Grbl sends back an echo of the line it has received, which has been pre-parsed (spaces
 // removed, capitalized letters, no comments) and is to be immediately executed by Grbl. Echoes will not be
@@ -457,6 +465,15 @@
 // will continue operating efficiently. Size the TX buffer around the size of a worst-case report.
 // #define RX_BUFFER_SIZE 128 // (1-254) Uncomment to override defaults in serial.h
 // #define TX_BUFFER_SIZE 100 // (1-254)
+
+// A simple software debouncing feature for hard limit switches. When enabled, the interrupt 
+// monitoring the hard limit switch pins will enable the Arduino's watchdog timer to re-check 
+// the limit pin state after a delay of about 32msec. This can help with CNC machines with 
+// problematic false triggering of their hard limit switches, but it WILL NOT fix issues with 
+// electrical interference on the signal cables from external sources. It's recommended to first
+// use shielded signal cables with their shielding connected to ground (old USB/computer cables 
+// work well and are cheap to find) and wire in a low-pass circuit into each limit pin.
+// #define ENABLE_SOFTWARE_DEBOUNCE // Default disabled. Uncomment to enable.
 
 // Configures the position after a probing cycle during Grbl's check mode. Disabled sets
 // the position to the probe target, when enabled sets the position to the start position.
@@ -557,6 +574,15 @@
 #define PARKING_PULLOUT_RATE 100.0 // Pull-out/plunge slow feed rate in mm/min.
 #define PARKING_PULLOUT_INCREMENT 5.0 // Spindle pull-out and plunge distance in mm. Incremental distance.
                                       // Must be positive value or equal to zero.
+
+// Enables a special set of M-code commands that enables and disables the parking motion. 
+// These are controlled by `M56`, `M56 P1`, or `M56 Px` to enable and `M56 P0` to disable. 
+// The command is modal and will be set after a planner sync. Since it is g-code, it is 
+// executed in sync with g-code commands. It is not a real-time command.
+// NOTE: PARKING_ENABLE is required. By default, M56 is active upon initialization. Use 
+// DEACTIVATE_PARKING_UPON_INIT to set M56 P0 as the power-up default.
+// #define ENABLE_PARKING_OVERRIDE_CONTROL   // Default disabled. Uncomment to enable
+// #define DEACTIVATE_PARKING_UPON_INIT // Default disabled. Uncomment to enable.
 
 // This option will automatically disable the laser during a feed hold by invoking a spindle stop
 // override immediately after coming to a stop. However, this also means that the laser still may

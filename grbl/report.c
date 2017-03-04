@@ -109,7 +109,6 @@ static void report_util_float_setting(uint8_t n, float val, uint8_t n_decimal) {
 // operation. Errors events can originate from the g-code parser, settings module, or asynchronously
 // from a critical error, such as a triggered hard limit. Interface should always monitor for these
 // responses.
-// NOTE: In REPORT_GUI_MODE, all error codes are greater than zero.
 void report_status_message(uint8_t status_code)
 {
   switch(status_code) {
@@ -123,7 +122,7 @@ void report_status_message(uint8_t status_code)
 }
 
 // Prints alarm messages.
-void report_alarm_message(int8_t alarm_code)
+void report_alarm_message(uint8_t alarm_code)
 {
   printPgmString(PSTR("ALARM:"));
   print_uint8_base10(alarm_code);
@@ -317,17 +316,24 @@ void report_gcode_modes()
     case SPINDLE_DISABLE : serial_write('5'); break;
   }
 
-  report_util_gcode_modes_M();
   #ifdef ENABLE_M7
     if (gc_state.modal.coolant) { // Note: Multiple coolant states may be active at the same time.
-      if (gc_state.modal.coolant & PL_COND_FLAG_COOLANT_MIST) { serial_write('7'); }
-      if (gc_state.modal.coolant & PL_COND_FLAG_COOLANT_FLOOD) { serial_write('8'); }
-    } else { serial_write('9'); }
+      if (gc_state.modal.coolant & PL_COND_FLAG_COOLANT_MIST) { report_util_gcode_modes_M(); serial_write('7'); }
+      if (gc_state.modal.coolant & PL_COND_FLAG_COOLANT_FLOOD) { report_util_gcode_modes_M(); serial_write('8'); }
+    } else { report_util_gcode_modes_M(); serial_write('9'); }
   #else
+    report_util_gcode_modes_M();
     if (gc_state.modal.coolant) { serial_write('8'); }
     else { serial_write('9'); }
   #endif
 
+  #ifdef ENABLE_PARKING_OVERRIDE_CONTROL
+    if (sys.override_ctrl == OVERRIDE_PARKING_MOTION) { 
+      report_util_gcode_modes_M();
+      print_uint8_base10(56);
+    }
+  #endif
+  
   printPgmString(PSTR(" T"));
   print_uint8_base10(gc_state.tool);
 
@@ -392,10 +398,22 @@ void report_build_info(char *line)
     serial_write('H');
   #endif
   #ifdef LIMITS_TWO_SWITCHES_ON_AXES
-    serial_write('L');
+    serial_write('T');
   #endif
   #ifdef ALLOW_FEED_OVERRIDE_DURING_PROBE_CYCLES
     serial_write('A');
+  #endif
+  #ifdef USE_SPINDLE_DIR_AS_ENABLE_PIN
+    serial_write('D');
+  #endif
+  #ifdef SPINDLE_ENABLE_OFF_WITH_ZERO_SPEED
+    serial_write('0');
+  #endif
+  #ifdef ENABLE_SOFTWARE_DEBOUNCE
+    serial_write('S');
+  #endif
+  #ifdef ENABLE_PARKING_OVERRIDE_CONTROL
+    serial_write('R');
   #endif
   #ifndef ENABLE_RESTORE_EEPROM_WIPE_ALL // NOTE: Shown when disabled.
     serial_write('*');
@@ -415,8 +433,15 @@ void report_build_info(char *line)
   #ifndef FORCE_BUFFER_SYNC_DURING_WCO_CHANGE // NOTE: Shown when disabled.
     serial_write('W');
   #endif
+  #ifndef HOMING_INIT_LOCK
+    serial_write('L');
+  #endif
+
   // NOTE: Compiled values, like override increments/max/min values, may be added at some point later.
-  // These will likely have a comma delimiter to separate them.
+  serial_write(',');
+  print_uint8_base10(BLOCK_BUFFER_SIZE-1);
+  serial_write(',');
+  print_uint8_base10(RX_BUFFER_SIZE);
 
   report_util_feedback_line_feed();
 }

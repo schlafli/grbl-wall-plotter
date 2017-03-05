@@ -42,6 +42,14 @@ int main(void)
   system_init();   // Configure pinout pins and pin-change interrupt
 
   memset(sys_position,0,sizeof(sys_position)); // Clear machine position.
+
+  //set initial positions to centre of drawing area
+#ifdef WALL_PLOTTER
+  float len = sqrt(square(settings.max_travel[X_AXIS]/2) *2);
+  sys_position[X_AXIS] = len * DEFAULT_X_STEPS_PER_MM;
+  sys_position[Y_AXIS] = len * DEFAULT_Y_STEPS_PER_MM;
+#endif
+
   sei(); // Enable interrupts
 
   // Initialize system state.

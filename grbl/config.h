@@ -34,7 +34,8 @@
 // NOTE: OEMs can avoid the need to maintain/update the defaults.h and cpu_map.h files and use only
 // one configuration file by placing their specific defaults and pin map at the bottom of this file.
 // If doing so, simply comment out these two defines and see instructions below.
-#define DEFAULTS_GENERIC
+//#define DEFAULTS_GENERIC
+#define DEFAULTS_CHEAP_WALL_PLOTTER
 #define CPU_MAP_ATMEGA328P // Arduino Uno CPU
 
 // Serial baud rate
@@ -196,6 +197,9 @@
 // Enable hanging wall plotter kinematics.
 // TODO: Add documentation about what exactly is supported and what isn't.
 #define WALL_PLOTTER
+
+//Use unipolar stepper drivers. THIS WILL DISABLE THE Z-AXIS. So only really useful for plotters
+#define UNIPOLAR
 
 // Inverts pin logic of the control command pins based on a mask. This essentially means you can use
 // normally-closed switches on the specified pins, rather than the default normally-open switches.
@@ -431,7 +435,9 @@
 // NOTE: Uncomment to enable. The recommended delay must be > 3us, and, when added with the
 // user-supplied step pulse time, the total time must not exceed 127us. Reported successful
 // values for certain setups have ranged from 5 to 20us.
+#ifndef UNIPOLAR
 // #define STEP_PULSE_DELAY 10 // Step pulse delay in microseconds. Default disabled.
+#endif
 
 // The number of linear motions in the planner buffer to be planned at any give time. The vast
 // majority of RAM that Grbl uses is based on this buffer size. Only increase if there is extra

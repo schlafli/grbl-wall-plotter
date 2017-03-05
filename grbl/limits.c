@@ -147,6 +147,8 @@ void limits_go_home(uint8_t cycle_mask)
 {
   if (sys.abort) { return; } // Block if system reset has been issued.
 
+  //TODO: revisit
+/*
   // Initialize plan data struct for homing motion. Spindle and coolant are disabled.
   plan_line_data_t plan_data;
   plan_line_data_t *pl_data = &plan_data;
@@ -330,7 +332,7 @@ void limits_go_home(uint8_t cycle_mask)
       #endif
 
     }
-  }
+  }*/
   sys.step_control = STEP_CONTROL_NORMAL_OP; // Return step control to normal operation.
 }
 

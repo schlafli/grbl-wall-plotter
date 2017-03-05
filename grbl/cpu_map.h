@@ -33,6 +33,20 @@
   #define SERIAL_RX     USART_RX_vect
   #define SERIAL_UDRE   USART_UDRE_vect
 
+#ifdef UNIPOLAR
+  //in unipolar mode PORTD & PORTB are used for stepping.
+  //X axis is PORTD pins 2-5            (Arduino D2-D5)
+  //Y axis is PORTD 6,7 and PORTB 0,1   (Arduino D6-D9)
+  #define PORTD_MASK 0xFC
+  #define PORTB_MASK 0x03
+
+  //direction bits are used to indicate step directions
+  #define X_DIRECTION_BIT   5  // Uno Digital Pin 5
+  #define Y_DIRECTION_BIT   6  // Uno Digital Pin 6
+  #define Z_DIRECTION_BIT   7  // Uno Digital Pin 7
+
+
+#else
   // Define step pulse output pins. NOTE: All step bit pins must be on the same port.
   #define STEP_DDR        DDRD
   #define STEP_PORT       PORTD
@@ -54,20 +68,27 @@
   #define STEPPERS_DISABLE_PORT   PORTB
   #define STEPPERS_DISABLE_BIT    0  // Uno Digital Pin 8
   #define STEPPERS_DISABLE_MASK   (1<<STEPPERS_DISABLE_BIT)
+#endif
 
   // Define homing/hard limit switch input pins and limit interrupt vectors.
   // NOTE: All limit bit pins must be on the same port, but not on a port with other input pins (CONTROL).
   #define LIMIT_DDR        DDRB
   #define LIMIT_PIN        PINB
   #define LIMIT_PORT       PORTB
+#ifdef UNIPOLAR
+  #define X_LIMIT_BIT      4  // Uno Digital Pin 11
+#else
   #define X_LIMIT_BIT      1  // Uno Digital Pin 9
+#endif
   #define Y_LIMIT_BIT      2  // Uno Digital Pin 10
+#ifndef UNIPOLAR
   #ifdef VARIABLE_SPINDLE // Z Limit pin and spindle enabled swapped to access hardware PWM on Pin 11.
     #define Z_LIMIT_BIT	   4 // Uno Digital Pin 12
   #else
     #define Z_LIMIT_BIT    3  // Uno Digital Pin 11
   #endif
-  #define LIMIT_MASK       ((1<<X_LIMIT_BIT)|(1<<Y_LIMIT_BIT)|(1<<Z_LIMIT_BIT)) // All limit bits
+#endif
+  #define LIMIT_MASK       ((1<<X_LIMIT_BIT)|(1<<Y_LIMIT_BIT)) // All limit bits
   #define LIMIT_INT        PCIE0  // Pin change interrupt enable pin
   #define LIMIT_INT_vect   PCINT0_vect
   #define LIMIT_PCMSK      PCMSK0 // Pin change interrupt register
@@ -92,6 +113,7 @@
     #define SPINDLE_DIRECTION_BIT   5  // Uno Digital Pin 13 (NOTE: D13 can't be pulled-high input due to LED.)
   #endif
 
+#ifndef DISABLE_COOLANT_SUBSYSTEM
   // Define flood and mist coolant enable output pins.
   #define COOLANT_FLOOD_DDR   DDRC
   #define COOLANT_FLOOD_PORT  PORTC
@@ -99,6 +121,7 @@
   #define COOLANT_MIST_DDR   DDRC
   #define COOLANT_MIST_PORT  PORTC
   #define COOLANT_MIST_BIT   4  // Uno Analog Pin 4
+#endif
 
   // Define user-control controls (cycle start, reset, feed hold) input pins.
   // NOTE: All CONTROLs pins must be on the same port and not on a port with other input pins (limits).
@@ -124,9 +147,9 @@
 
   // Variable spindle configuration below. Do not change unless you know what you are doing.
   // NOTE: Only used when variable spindle is enabled.
-  #define SPINDLE_PWM_MAX_VALUE     255 // Don't change. 328p fast PWM mode fixes top value as 255.
+  #define SPINDLE_PWM_MAX_VALUE     28 // Don't change. 328p fast PWM mode fixes top value as 255.
   #ifndef SPINDLE_PWM_MIN_VALUE
-    #define SPINDLE_PWM_MIN_VALUE   1   // Must be greater than zero.
+    #define SPINDLE_PWM_MIN_VALUE   18   // Must be greater than zero.
   #endif
   #define SPINDLE_PWM_OFF_VALUE     0
   #define SPINDLE_PWM_RANGE         (SPINDLE_PWM_MAX_VALUE-SPINDLE_PWM_MIN_VALUE)
@@ -140,7 +163,8 @@
   // #define SPINDLE_TCCRB_INIT_MASK   (1<<CS20)               // Disable prescaler -> 62.5kHz
   // #define SPINDLE_TCCRB_INIT_MASK   (1<<CS21)               // 1/8 prescaler -> 7.8kHz (Used in v0.9)
   // #define SPINDLE_TCCRB_INIT_MASK   ((1<<CS21) | (1<<CS20)) // 1/32 prescaler -> 1.96kHz
-  #define SPINDLE_TCCRB_INIT_MASK      (1<<CS22)               // 1/64 prescaler -> 0.98kHz (J-tech laser)
+  // #define SPINDLE_TCCRB_INIT_MASK   (1<<CS22)               // 1/64 prescaler -> 0.98kHz (J-tech laser)
+  #define SPINDLE_TCCRB_INIT_MASK      ((1<<CS22) | (1<<CS21) | (1<<CS20)) // 1/1024 prescaler -> 61 Hz (Servo control)
 
   // NOTE: On the 328p, these must be the same as the SPINDLE_ENABLE settings.
   #define SPINDLE_PWM_DDR	  DDRB

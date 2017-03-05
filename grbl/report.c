@@ -31,7 +31,7 @@
 
 // Internal report utilities to reduce flash with repetitive tasks turned into functions.
 void report_util_setting_prefix(uint8_t n) { serial_write('$'); print_uint8_base10(n); serial_write('='); }
-static void report_util_line_feed() { printPgmString(PSTR("\r\n")); }
+static void report_util_line_feed() { printNewLine(); }
 static void report_util_feedback_line_feed() { serial_write(']'); report_util_line_feed(); }
 static void report_util_gcode_modes_G() { printPgmString(PSTR(" G")); }
 static void report_util_gcode_modes_M() { printPgmString(PSTR(" M")); }

@@ -179,8 +179,10 @@ void system_execute_startup(char *line);
 
 void system_flag_wco_change();
 
+#ifndef WALL_PLOTTER
 // Returns machine position of axis 'idx'. Must be sent a 'step' array.
 float system_convert_axis_steps_to_mpos(int32_t *steps, uint8_t idx);
+#endif
 
 // Updates a machine 'position' array based on the 'step' array sent.
 void system_convert_array_steps_to_mpos(float *position, int32_t *steps);
@@ -191,10 +193,13 @@ void system_convert_array_steps_to_mpos(float *position, int32_t *steps);
   int32_t system_convert_corexy_to_y_axis_steps(int32_t *steps);
 #endif
 
-// Wall plotter calculation only. Returns x or y-axis "steps" based on wall plotter motor steps
+
 #ifdef WALL_PLOTTER
-  int32_t system_convert_wall_plotter_to_x_axis_steps(int32_t *steps);
-  int32_t system_convert_wall_plotter_to_y_axis_steps(int32_t *steps);
+  // Wall plotter calculation. Returns position from steps
+  void system_convert_wall_plotter_to_position(int32_t *steps, float * position);
+
+  // Wall plotter calculation. Returns position from steps
+  void system_convert_position_to_wall_plotter_steps(float * position, int32_t *steps);
 #endif
 
 

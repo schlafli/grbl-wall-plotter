@@ -22,6 +22,7 @@
 #ifndef print_h
 #define print_h
 
+void printNewLine();
 
 void printString(const char *s);
 

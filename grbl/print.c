@@ -28,6 +28,9 @@ void printString(const char *s)
     serial_write(*s++);
 }
 
+void printNewLine(){
+  printPgmString(PSTR("\r\n"));
+}
 
 // Print a string stored in PGM-memory
 void printPgmString(const char *s)

@@ -56,6 +56,18 @@
   #endif
 #endif
 
+#ifdef UNIPOLAR
+   uint8_t STEP_LOOKUP_8[8] = {
+      0x01,
+      0x03,
+      0x02,
+      0x06,
+      0x04,
+      0x0c,
+      0x08,
+      0x09
+  };
+#endif
 
 // Stores the planner block Bresenham algorithm execution data for the segments in the segment
 // buffer. Normally, this buffer is partially in-use, but, for the worst case scenario, it will
@@ -212,13 +224,14 @@ static st_prep_t prep;
 // enabled. Startup init and limits call this function but shouldn't start the cycle.
 void st_wake_up()
 {
+#ifndef UNIPOLAR
   // Enable stepper drivers.
   if (bit_istrue(settings.flags,BITFLAG_INVERT_ST_ENABLE)) { STEPPERS_DISABLE_PORT |= (1<<STEPPERS_DISABLE_BIT); }
   else { STEPPERS_DISABLE_PORT &= ~(1<<STEPPERS_DISABLE_BIT); }
 
   // Initialize stepper output bits to ensure first ISR call does not step.
   st.step_outbits = step_port_invert_mask;
-
+#endif
   // Initialize step pulse timing from settings. Here to ensure updating after re-writing.
   #ifdef STEP_PULSE_DELAY
     // Set total step pulse time after direction pin set. Ad hoc computation from oscilloscope.
@@ -244,16 +257,25 @@ void st_go_idle()
   busy = false;
 
   // Set stepper driver idle state, disabled or enabled, depending on settings and circumstances.
+#ifndef UNIPOLAR
   bool pin_state = false; // Keep enabled.
+#endif
   if (((settings.stepper_idle_lock_time != 0xff) || sys_rt_exec_alarm || sys.state == STATE_SLEEP) && sys.state != STATE_HOMING) {
     // Force stepper dwell to lock axes for a defined amount of time to ensure the axes come to a complete
     // stop and not drift from residual inertial forces at the end of the last movement.
     delay_ms(settings.stepper_idle_lock_time);
+#ifndef UNIPOLAR
     pin_state = true; // Override. Disable steppers.
+#endif
   }
+#ifdef UNIPOLAR
+    PORTD &= ~PORTD_MASK; //disable pins 2-7 on D
+    PORTB &= ~PORTB_MASK; //disable pins 0,1 on B
+#else
   if (bit_istrue(settings.flags,BITFLAG_INVERT_ST_ENABLE)) { pin_state = !pin_state; } // Apply pin invert.
   if (pin_state) { STEPPERS_DISABLE_PORT |= (1<<STEPPERS_DISABLE_BIT); }
   else { STEPPERS_DISABLE_PORT &= ~(1<<STEPPERS_DISABLE_BIT); }
+#endif
 }
 
 
@@ -308,7 +330,15 @@ void st_go_idle()
 ISR(TIMER1_COMPA_vect)
 {
   if (busy) { return; } // The busy-flag is used to avoid reentering this interrupt
-
+  
+#ifdef UNIPOLAR
+  uint8_t port_d_out = STEP_LOOKUP_8[ sys_position[X_AXIS] & 0x7 ];
+  uint8_t tmp = STEP_LOOKUP_8[ sys_position[Y_AXIS] & 0x7 ];
+  uint8_t port_b_out = tmp >> 2 ;
+  port_d_out = (tmp << 6) | (port_d_out << 2);
+  PORTD = (PORTD & ~PORTD_MASK) | ( port_d_out & PORTD_MASK);
+  PORTB = (PORTB & ~PORTB_MASK) | ( port_b_out & PORTB_MASK);
+#else
   // Set the direction pins a couple of nanoseconds before we step the steppers
   DIRECTION_PORT = (DIRECTION_PORT & ~DIRECTION_MASK) | (st.dir_outbits & DIRECTION_MASK);
 
@@ -318,11 +348,14 @@ ISR(TIMER1_COMPA_vect)
   #else  // Normal operation
     STEP_PORT = (STEP_PORT & ~STEP_MASK) | st.step_outbits;
   #endif
+#endif
 
+#ifndef UNIPOLAR
   // Enable step pulse reset timer so that The Stepper Port Reset Interrupt can reset the signal after
   // exactly settings.pulse_microseconds microseconds, independent of the main Timer1 prescaler.
   TCNT0 = st.step_pulse_time; // Reload Timer0 counter
   TCCR0B = (1<<CS01); // Begin Timer0. Full speed, 1/8 prescaler
+#endif
 
   busy = true;
   sei(); // Re-enable interrupts to allow Stepper Port Reset Interrupt to fire on-time.
@@ -392,7 +425,9 @@ ISR(TIMER1_COMPA_vect)
     st.counter_x += st.exec_block->steps[X_AXIS];
   #endif
   if (st.counter_x > st.exec_block->step_event_count) {
+#ifndef UNIPOLAR
     st.step_outbits |= (1<<X_STEP_BIT);
+#endif
     st.counter_x -= st.exec_block->step_event_count;
     if (st.exec_block->direction_bits & (1<<X_DIRECTION_BIT)) { sys_position[X_AXIS]--; }
     else { sys_position[X_AXIS]++; }
@@ -403,7 +438,9 @@ ISR(TIMER1_COMPA_vect)
     st.counter_y += st.exec_block->steps[Y_AXIS];
   #endif
   if (st.counter_y > st.exec_block->step_event_count) {
+#ifndef UNIPOLAR
     st.step_outbits |= (1<<Y_STEP_BIT);
+#endif
     st.counter_y -= st.exec_block->step_event_count;
     if (st.exec_block->direction_bits & (1<<Y_DIRECTION_BIT)) { sys_position[Y_AXIS]--; }
     else { sys_position[Y_AXIS]++; }
@@ -414,7 +451,9 @@ ISR(TIMER1_COMPA_vect)
     st.counter_z += st.exec_block->steps[Z_AXIS];
   #endif
   if (st.counter_z > st.exec_block->step_event_count) {
+#ifndef UNIPOLAR
     st.step_outbits |= (1<<Z_STEP_BIT);
+#endif
     st.counter_z -= st.exec_block->step_event_count;
     if (st.exec_block->direction_bits & (1<<Z_DIRECTION_BIT)) { sys_position[Z_AXIS]--; }
     else { sys_position[Z_AXIS]++; }
@@ -446,6 +485,7 @@ ISR(TIMER1_COMPA_vect)
 // This interrupt is enabled by ISR_TIMER1_COMPAREA when it sets the motor port bits to execute
 // a step. This ISR resets the motor port after a short period (settings.pulse_microseconds)
 // completing one step cycle.
+#ifndef UNIPOLAR
 ISR(TIMER0_OVF_vect)
 {
   // Reset stepping pins (leave the direction pins)
@@ -463,18 +503,22 @@ ISR(TIMER0_OVF_vect)
     STEP_PORT = st.step_bits; // Begin step pulse.
   }
 #endif
-
+#endif
 
 // Generates the step and direction port invert masks used in the Stepper Interrupt Driver.
 void st_generate_step_dir_invert_masks()
 {
-  uint8_t idx;
   step_port_invert_mask = 0;
   dir_port_invert_mask = 0;
+
+// UNIPOLAR has no step inverting, just flip the connector
+#ifndef UNIPOLAR
+  uint8_t idx;
   for (idx=0; idx<N_AXIS; idx++) {
     if (bit_istrue(settings.step_invert_mask,bit(idx))) { step_port_invert_mask |= get_step_pin_mask(idx); }
     if (bit_istrue(settings.dir_invert_mask,bit(idx))) { dir_port_invert_mask |= get_direction_pin_mask(idx); }
   }
+#endif
 }
 
 
@@ -497,19 +541,29 @@ void st_reset()
   st_generate_step_dir_invert_masks();
   st.dir_outbits = dir_port_invert_mask; // Initialize direction bits to default.
 
+#ifdef UNIPOLAR
+  PORTD &= ~PORTD_MASK; //disable pins 2-7 on D
+  PORTB &= ~PORTB_MASK; //disable pins 0,1 on B
+#else
   // Initialize step and direction port pins.
   STEP_PORT = (STEP_PORT & ~STEP_MASK) | step_port_invert_mask;
   DIRECTION_PORT = (DIRECTION_PORT & ~DIRECTION_MASK) | dir_port_invert_mask;
+#endif
 }
 
 
 // Initialize and start the stepper motor subsystem
 void stepper_init()
 {
+#ifdef UNIPOLAR
+   DDRB |= PORTB_MASK;
+   DDRD |= PORTD_MASK;
+#else
   // Configure step and direction interface pins
   STEP_DDR |= STEP_MASK;
   STEPPERS_DISABLE_DDR |= 1<<STEPPERS_DISABLE_BIT;
   DIRECTION_DDR |= DIRECTION_MASK;
+#endif
 
   // Configure Timer 1: Stepper Driver Interrupt
   TCCR1B &= ~(1<<WGM13); // waveform generation = 0100 = CTC

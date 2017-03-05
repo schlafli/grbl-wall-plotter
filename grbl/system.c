@@ -283,6 +283,7 @@ void system_flag_wco_change()
 }
 
 
+#ifndef WALL_PLOTTER
 // Returns machine position of axis 'idx'. Must be sent a 'step' array.
 // NOTE: If motor steps and machine position are not in the same coordinate frame, this function
 //   serves as a central place to compute the transformation.
@@ -297,27 +298,25 @@ float system_convert_axis_steps_to_mpos(int32_t *steps, uint8_t idx)
     } else {
       pos = steps[idx]/settings.steps_per_mm[idx];
     }
-  #elif defined(WALL_PLOTTER)
-    if (idx==X_AXIS) {
-      pos = (float)system_convert_wall_plotter_to_x_axis_steps(steps) / settings.steps_per_mm[idx];
-    } else if (idx==Y_AXIS) {
-      pos = (float)system_convert_wall_plotter_to_y_axis_steps(steps) / settings.steps_per_mm[idx];
-    } else {
-      pos = steps[idx]/settings.steps_per_mm[idx];
-    }
   #else
     pos = steps[idx]/settings.steps_per_mm[idx];
   #endif
   return(pos);
 }
+#endif
 
 
 void system_convert_array_steps_to_mpos(float *position, int32_t *steps)
 {
+#ifdef WALL_PLOTTER
+  system_convert_wall_plotter_to_position(steps, position);
+  position[Z_AXIS] = steps[Z_AXIS]/settings.steps_per_mm[Z_AXIS];
+#else
   uint8_t idx;
   for (idx=0; idx<N_AXIS; idx++) {
     position[idx] = system_convert_axis_steps_to_mpos(steps, idx);
   }
+#endif
   return;
 }
 
@@ -339,13 +338,23 @@ void system_convert_array_steps_to_mpos(float *position, int32_t *steps)
 // A length = sqrt( X^2 + Y^2 )
 // B length = sqrt( (MACHINE_WIDTH - X)^2 + Y^2 )
 #ifdef WALL_PLOTTER
-  int32_t system_convert_wall_plotter_to_x_axis_steps(int32_t *steps)
-  {
-    return( sqrt(steps[A_MOTOR]*steps[A_MOTOR] + steps[B_MOTOR]*steps[B_MOTOR]) );
+  void system_convert_wall_plotter_to_position(int32_t *steps, float *positions){
+    float a = (float) steps[A_MOTOR] / settings.steps_per_mm[A_MOTOR];
+    float b = -settings.max_travel[X_AXIS];
+    float c = (float) steps[B_MOTOR] / settings.steps_per_mm[B_MOTOR];
+
+    float theta = ((a * a + b * b - c * c) / (2.0 * a * b));
+    positions[X_AXIS] = (theta * a);
+    positions[Y_AXIS] = (-settings.max_travel[Y_AXIS] - ((sqrt(1.0 - theta * theta) * a)));
   }
-  int32_t system_convert_wall_plotter_to_y_axis_steps(int32_t *steps)
-  {
-    return( sqrt( square(settings.max_travel[A_MOTOR] - steps[A_MOTOR]) + steps[B_MOTOR]*steps[B_MOTOR] ) );
+
+  void system_convert_position_to_wall_plotter_steps(float * position, int32_t *steps){
+    float dy = position[Y_AXIS] + settings.max_travel[Y_AXIS]; //already negative for some reason
+    float dx = position[X_AXIS];
+    steps[X_AXIS] = lround(sqrt(dx * dx + dy * dy) * settings.steps_per_mm[A_MOTOR]);
+    // find length to M2
+    dx = position[X_AXIS] + settings.max_travel[X_AXIS]; //also negative
+    steps[Y_AXIS]  = lround(sqrt(dx * dx + dy * dy) * settings.steps_per_mm[B_MOTOR]);
   }
 #endif
 

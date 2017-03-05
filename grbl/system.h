@@ -129,7 +129,9 @@ typedef struct {
   uint8_t suspend;             // System suspend bitflag variable that manages holds, cancels, and safety door.
   uint8_t soft_limit;          // Tracks soft limit errors for the state machine. (boolean)
   uint8_t step_control;        // Governs the step segment generator depending on system state.
+  #ifndef DISABLE_PROBE_SUBSYSTEM
   uint8_t probe_succeeded;     // Tracks if last probing cycle was successful.
+  #endif
   uint8_t homing_axis_lock;    // Locks axes when limits engage. Used as an axis motion mask in the stepper ISR.
   uint8_t f_override;          // Feed rate override value in percent
   uint8_t r_override;          // Rapids override value in percent
@@ -148,9 +150,11 @@ extern system_t sys;
 
 // NOTE: These position variables may need to be declared as volatiles, if problems arise.
 extern int32_t sys_position[N_AXIS];      // Real-time machine (aka home) position vector in steps.
+#ifndef DISABLE_PROBE_SUBSYSTEM
 extern int32_t sys_probe_position[N_AXIS]; // Last probe position in machine coordinates and steps.
 
 extern volatile uint8_t sys_probe_state;   // Probing state value.  Used to coordinate the probing cycle with stepper ISR.
+#endif
 extern volatile uint8_t sys_rt_exec_state;   // Global realtime executor bitflag variable for state management. See EXEC bitmasks.
 extern volatile uint8_t sys_rt_exec_alarm;   // Global realtime executor bitflag variable for setting various alarms.
 extern volatile uint8_t sys_rt_exec_motion_override; // Global realtime executor bitflag variable for motion-based overrides.

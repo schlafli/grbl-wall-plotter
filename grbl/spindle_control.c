@@ -55,7 +55,7 @@ void spindle_init()
   spindle_stop();
 }
 
-
+#ifndef SERVO_FAKE_Z_AXIS
 uint8_t spindle_get_state()
 {
 	#ifdef VARIABLE_SPINDLE
@@ -84,7 +84,7 @@ uint8_t spindle_get_state()
 	#endif
 	return(SPINDLE_STATE_DISABLE);
 }
-
+#endif
 
 // Disables the spindle and sets PWM output to zero when PWM variable spindle speed is enabled.
 // Called by various main program and ISR routines. Keep routine small, fast, and efficient.
@@ -198,7 +198,11 @@ void spindle_stop()
       if (settings.flags & BITFLAG_LASER_MODE) { 
         if (state == SPINDLE_ENABLE_CCW) { rpm = 0.0; } // TODO: May need to be rpm_min*(100/MAX_SPINDLE_SPEED_OVERRIDE);
       }
+#ifdef SERVO_FAKE_Z_AXIS
+      spindle_compute_pwm_value(rpm);
+#else
       spindle_set_speed(spindle_compute_pwm_value(rpm));
+#endif
     #endif
     #if (defined(USE_SPINDLE_DIR_AS_ENABLE_PIN) && \
         !defined(SPINDLE_ENABLE_OFF_WITH_ZERO_SPEED)) || !defined(VARIABLE_SPINDLE)

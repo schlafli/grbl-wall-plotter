@@ -552,7 +552,7 @@ void report_realtime_status()
 
   // Report realtime feed speed
   #ifdef REPORT_FIELD_CURRENT_FEED_SPEED
-    #ifdef VARIABLE_SPINDLE
+    #if defined(VARIABLE_SPINDLE) && !defined(SERVO_FAKE_Z_AXIS)
       printPgmString(PSTR("|FS:"));
       printFloat_RateValue(st_get_realtime_rate());
       serial_write(',');
@@ -611,6 +611,7 @@ void report_realtime_status()
       serial_write(',');
       print_uint8_base10(sys.spindle_speed_ovr);
 
+    #ifndef SERVO_FAKE_Z_AXIS
       uint8_t sp_state = spindle_get_state();
       #ifndef DISABLE_COOLANT_SUBSYSTEM
         uint8_t cl_state = coolant_get_state();
@@ -639,6 +640,7 @@ void report_realtime_status()
           #endif
         #endif
       }
+    #endif
     }
   #endif
 

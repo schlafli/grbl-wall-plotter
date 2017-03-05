@@ -48,6 +48,7 @@ int main(void)
   float len = sqrt(square(settings.max_travel[X_AXIS]/2) *2);
   sys_position[X_AXIS] = len * DEFAULT_X_STEPS_PER_MM;
   sys_position[Y_AXIS] = len * DEFAULT_Y_STEPS_PER_MM;
+  sys_position[Z_AXIS] = 1.0 * DEFAULT_Z_STEPS_PER_MM;
 #endif
 
   sei(); // Enable interrupts

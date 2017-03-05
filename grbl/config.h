@@ -164,6 +164,11 @@
 // coordinates through Grbl '$#' print parameters.
 #define MESSAGE_PROBE_COORDINATES // Enabled by default. Comment to disable.
 
+// Use the spindle PWM pin to control a servo that is mapped to the Z axis. Useful for plotters.
+// This will disable all spindle control.
+#define SERVO_FAKE_Z_AXIS
+
+
 // Disables the whole coolant subsystem.
 #define DISABLE_COOLANT_SUBSYSTEM
 
@@ -198,7 +203,7 @@
 // TODO: Add documentation about what exactly is supported and what isn't.
 #define WALL_PLOTTER
 
-//Use unipolar stepper drivers. THIS WILL DISABLE THE Z-AXIS. So only really useful for plotters
+// Use unipolar stepper drivers. THIS WILL DISABLE THE Z-AXIS stepper. So only really useful for plotters
 #define UNIPOLAR
 
 // Inverts pin logic of the control command pins based on a mask. This essentially means you can use

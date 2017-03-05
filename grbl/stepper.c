@@ -357,6 +357,15 @@ ISR(TIMER1_COMPA_vect)
   TCCR0B = (1<<CS01); // Begin Timer0. Full speed, 1/8 prescaler
 #endif
 
+  #ifdef SERVO_FAKE_Z_AXIS
+      int8_t zAxis = sys_position[Z_AXIS];
+      if(sys_position[Z_AXIS] > 40){
+        zAxis = 40;
+      }else if(sys_position[Z_AXIS]<-100){
+        zAxis = -100;
+      }
+      spindle_set_speed(SPINDLE_PWM_MIN_VALUE + (zAxis/10) + 10);
+  #endif
   busy = true;
   sei(); // Re-enable interrupts to allow Stepper Port Reset Interrupt to fire on-time.
          // NOTE: The remaining code in this ISR will finish before returning to main program.
@@ -396,7 +405,9 @@ ISR(TIMER1_COMPA_vect)
 
       #ifdef VARIABLE_SPINDLE
         // Set real-time spindle output as segment is loaded, just prior to the first step.
+        #ifndef SERVO_FAKE_Z_AXIS
         spindle_set_speed(st.exec_segment->spindle_pwm);
+        #endif
       #endif
 
     } else {
